@@ -1,10 +1,13 @@
 package io.github.xanderendre;
 
 
-import org.neo4j.driver.AuthTokens;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Session;
+import org.neo4j.driver.*;
+import org.neo4j.driver.exceptions.Neo4jException;
+import org.neo4j.driver.types.Node;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class Database implements AutoCloseable {
 
@@ -18,6 +21,17 @@ public class Database implements AutoCloseable {
         driver = GraphDatabase.driver(uri, AuthTokens.basic(username, password));
     }
 
+    public static void insertUserData(ArrayList<Person> people) {
+        for (Person person : people) {
+            driver.session().run("CREATE (:Employee {EmployeeId: '" + person.getId() + "', FirstName: '" + person.getFirstName() + "', LastName: '" + person.getLastName() + "', HireYear: '" + person.getHireYear() + "'})");
+        }
+        driver.close();
+    }
+
+    private static void createRelationships() {
+
+    }
+
     @Override
     public void close() throws Exception {
 
@@ -28,16 +42,46 @@ public class Database implements AutoCloseable {
     public void createUserData(Person person) {
         try (Session session = driver.session()) {
 
-            driver.session().run("CREATE (:Employee {EmployeeId: '" + person.getId() +
-                    "', FirstName: '" + person.getFirstName() +
-                    "', LastName: '" + person.getLastName() +
-                    "', HireYear: '" + person.getHireYear()
-            + "'})");
+            driver.session().run("CREATE (:Employee {EmployeeId: '" + person.getId() + "', FirstName: '" + person.getFirstName() + "', LastName: '" + person.getLastName() + "', HireYear: '" + person.getHireYear() + "'})");
 
             session.close();
             close();
         } catch (Exception exception) {
             exception.printStackTrace();
+        }
+    }
+
+    public void readUserData() {
+        try (Session session = driver.session()) {
+            Result result = driver.session().run("MATCH (person:Employee) RETURN (person)");
+/*
+            Iterator<Node> javaNodes = result.columnAs("m");
+            for (Node node : IteratorUtil.asIterable(javaNodes))
+            {
+                //parse the node in here
+            }
+*/
+
+            session.close();
+        } catch (Neo4jException e) {
+            e.printStackTrace();
+        }
+
+        driver.close();
+
+    }
+
+    public void readUserData(List<Person> people) {
+        List<Person> allPeople = new ArrayList<Person>();
+        for (Person person : people) {
+            try {
+                driver.session().run("MATCH (person:Employee) RETURN (p)");
+
+            } catch (Neo4jException e) {
+                e.printStackTrace();
+            }
+
+            driver.close();
         }
     }
 

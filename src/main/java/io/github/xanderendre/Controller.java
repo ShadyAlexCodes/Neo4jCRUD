@@ -1,6 +1,8 @@
 package io.github.xanderendre;
 
-import javax.xml.crypto.Data;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.types.Node;
+
 import java.io.File;
 import java.io.FileReader;
 import java.util.*;
@@ -19,8 +21,8 @@ public class Controller {
                 case 1 -> createUser();
                 case 2 -> readUsers();
 /*                case 3 -> editUsers();
-                case 4 -> deleteUsers();
-                case 5 -> importData();*/
+                case 4 -> deleteUsers();*/
+                case 5 -> importData();
             }
         }
     }
@@ -32,8 +34,8 @@ public class Controller {
             int selection = Util.getMenuSelection("Read Users", new String[]{"Read All Users", "Read 'X' number of Users", "Read specific User", "Read for field and value", "Read for multiple fields and values"}, true);
             switch (selection) {
                 case 0 -> quit = true;
-   /*             case 1 -> readAllUsers();
-                case 2 -> readXUsers();
+                case 1 -> readAllUsers();
+    /*             case 2 -> readXUsers();
                 case 3 -> readSpecificUser();
                 case 4 -> readFieldAndValue();*/
             }
@@ -77,7 +79,7 @@ public class Controller {
             }
         }
     }
-
+*/
 
     public void importData() {
         boolean quit = false;
@@ -87,12 +89,11 @@ public class Controller {
             switch (selection) {
                 case 0 -> quit = true;
                 case 1 -> importAllData();
-                case 2 -> importFakeData();
                 /// case 3 -> editYearHired(person);
             }
         }
     }
-
+/*
     public void readFieldAndValue() {
         String field = Util.getString("Enter the field you are looking for (Available Fields:\n " + Arrays.asList(avaliableFields) + "):");
         if (Util.getBoolean("Is the value a number?", "Yes", "No")) {
@@ -136,10 +137,54 @@ public class Controller {
         database.createUserData(person);
     }
 
-//
-//    private void readAllUsers() {
-//        Database.readUserData();
-//    }
+    public void importAllData() {
+        long startTime = System.nanoTime();
+        ArrayList<Node> data = new ArrayList<>(List.of());
+
+        ArrayList<Person> people = capturePeopleData();
+
+       Database.insertUserData(people);
+        long endTime = System.nanoTime();
+
+        System.out.println("Elapsed Time in nano seconds: " + (endTime - startTime));
+    }
+
+
+    public ArrayList<Person> capturePeopleData() {
+
+        ArrayList<Person> people = new ArrayList<Person>();
+        File folder = new File("data\\people\\long");
+        Person person = null;
+        for (File fileEntry : Objects.requireNonNull(folder.listFiles())) {
+            File file = new File(fileEntry.toURI());
+
+            if (file.exists()) {
+                Scanner scanner;
+                try {
+                    scanner = new Scanner(new FileReader(file));
+
+                    while (scanner.hasNextLine()) {
+                        String lineToRead = scanner.nextLine();
+
+                        person = new Person(lineToRead);
+                        people.add(person);
+                    }
+                    scanner.close();
+                } catch (Exception exception) {
+                    exception.printStackTrace();
+                }
+            }
+        }
+        return people;
+    }
+
+
+    private void readAllUsers() {
+
+        database.readUserData();
+
+
+    }
 //
 //    private void readXUsers() {
 //        int quantity = Util.getInteger("Enter the quantity of users you want to read:");
