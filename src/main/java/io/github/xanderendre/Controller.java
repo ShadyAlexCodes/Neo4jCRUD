@@ -1,10 +1,13 @@
 package io.github.xanderendre;
 
 import org.neo4j.driver.Result;
+import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.driver.types.Node;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.*;
 
 public class Controller {
@@ -20,8 +23,8 @@ public class Controller {
                 case 0 -> quit = true;
                 case 1 -> createUser();
                 case 2 -> readUsers();
-/*                case 3 -> editUsers();
-                case 4 -> deleteUsers();*/
+                case 3 -> editUser();
+/*                case 4 -> deleteUsers();*/
                 case 5 -> importData();
             }
         }
@@ -42,31 +45,29 @@ public class Controller {
         }
     }
 
-/*
 
-    public void editUsers() {
+
+    public void editUser() {
         boolean quit = false;
-        Person person = null;
-        String lastName = Util.getString("Enter the user's last name:");
-
-        if (Database.readUserData(lastName) != null) {
-            person = Database.createUserData(lastName);
-        } else {
-            System.out.println("The requested user does not exist");
-            return;
-        }
+        String id = Util.getString("Enter the user's id:");
 
         while (!quit) {
-            int selection = Util.getMenuSelection("Updating a User", new String[]{"Update a User's Field", "Bulk Update All Users"}, true);
+            int selection = Util.getMenuSelection("Updating a User", new String[]{"Update a User's First Name", "Update a User's Last name", "Update a User's Hire Year"}, true);
             switch (selection) {
                 case 0 -> quit = true;
-                case 1 -> editUserFields(person);
-                // case 4 -> bulkUpdateUsers(person);
+            //    case 1 -> System.out.println("Not Implemented Yet");
+                //  GET USER INPUT
+//                MATCH (p:Person {id: 'Given ID'})
+//                SET p.field_given = user_input
+//                RETURN p
+
+                case 2 -> System.out.println("Not Implemented Yet");
+                case 3 -> System.out.println("Not Implemented Yet");
             }
         }
     }
 
-    public void deleteUsers() {
+/*    public void deleteUsers() {
         boolean quit = false;
 
         while (!quit) {
@@ -139,49 +140,63 @@ public class Controller {
 
     public void importAllData() {
         long startTime = System.nanoTime();
-        ArrayList<Node> data = new ArrayList<>(List.of());
 
-        ArrayList<Person> people = capturePeopleData();
+        ArrayList<String> people = readLines();
+        ArrayList<Person> aryPeople = createPerson(people);
 
-       Database.insertUserData(people);
+        database.insertAllUserData(aryPeople);
+
         long endTime = System.nanoTime();
 
         System.out.println("Elapsed Time in nano seconds: " + (endTime - startTime));
     }
-
-
-    public ArrayList<Person> capturePeopleData() {
-
+   public static ArrayList<Person> createPerson(ArrayList<String> lineToRead) {
         ArrayList<Person> people = new ArrayList<Person>();
-        File folder = new File("data\\people\\long");
-        Person person = null;
-        for (File fileEntry : Objects.requireNonNull(folder.listFiles())) {
-            File file = new File(fileEntry.toURI());
 
-            if (file.exists()) {
-                Scanner scanner;
-                try {
-                    scanner = new Scanner(new FileReader(file));
-
-                    while (scanner.hasNextLine()) {
-                        String lineToRead = scanner.nextLine();
-
-                        person = new Person(lineToRead);
-                        people.add(person);
-                    }
-                    scanner.close();
-                } catch (Exception exception) {
-                    exception.printStackTrace();
-                }
-            }
+        for (String line : lineToRead) {
+            Person person = new Person(line);
+            people.add(person);
         }
+
         return people;
+    }
+
+    public static ArrayList<String> readLines() {
+        String fileName = "data\\people\\output.csv";
+        File file = new File(fileName);
+
+        ArrayList<String> lines = new ArrayList<String>();
+
+        if (file.exists()) {
+            // Reads text from an input string
+            BufferedReader bufferedReader;
+            try {
+                bufferedReader = new BufferedReader((new FileReader(file)));
+                String lineToRead = bufferedReader.readLine();
+
+                while (lineToRead != null) {
+                    lineToRead = bufferedReader.readLine();
+                    lines.add(lineToRead);
+                }
+
+                bufferedReader.close();
+            } catch (IOException exception) {
+                exception.printStackTrace();
+            }
+        } else {
+            System.out.println("The file " + file + " was not found!");
+        }
+        return lines;
     }
 
 
     private void readAllUsers() {
+        try {
+            database.readUserData();
+        } catch(Neo4jException e){
+            e.printStackTrace();
+        }
 
-        database.readUserData();
 
 
     }

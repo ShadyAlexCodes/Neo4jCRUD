@@ -5,6 +5,7 @@ import org.neo4j.driver.*;
 import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.driver.types.Node;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -19,13 +20,6 @@ public class Database implements AutoCloseable {
         String password = "mypassword";
 
         driver = GraphDatabase.driver(uri, AuthTokens.basic(username, password));
-    }
-
-    public static void insertUserData(ArrayList<Person> people) {
-        for (Person person : people) {
-            driver.session().run("CREATE (:Employee {EmployeeId: '" + person.getId() + "', FirstName: '" + person.getFirstName() + "', LastName: '" + person.getLastName() + "', HireYear: '" + person.getHireYear() + "'})");
-        }
-        driver.close();
     }
 
     private static void createRelationships() {
@@ -51,18 +45,31 @@ public class Database implements AutoCloseable {
         }
     }
 
-    public void readUserData() {
+    public void insertAllUserData(ArrayList<Person> people) {
         try (Session session = driver.session()) {
-            Result result = driver.session().run("MATCH (person:Employee) RETURN (person)");
-/*
-            Iterator<Node> javaNodes = result.columnAs("m");
-            for (Node node : IteratorUtil.asIterable(javaNodes))
-            {
-                //parse the node in here
-            }
-*/
 
+            for (Person person : people) {
+                driver.session().run("CREATE (:Employee {EmployeeId: '" + person.getId() + "', FirstName: '" + person.getFirstName() + "', LastName: '" + person.getLastName() + "', HireYear: '" + person.getHireYear() + "'})");
+            }
             session.close();
+            close();
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+    }
+
+
+
+
+    public void readUserData() {
+//       used to be in try -> Session session = driver.session()
+        List<Person> loadAllPpl;
+        try  {
+            Result result = driver.session().run("MATCH (n:Employee) RETURN (*)");
+//            while()
+
+
+
         } catch (Neo4jException e) {
             e.printStackTrace();
         }
@@ -75,7 +82,7 @@ public class Database implements AutoCloseable {
         List<Person> allPeople = new ArrayList<Person>();
         for (Person person : people) {
             try {
-                driver.session().run("MATCH (person:Employee) RETURN (p)");
+                driver.session().run("MATCH (p) RETURN (p)");
 
             } catch (Neo4jException e) {
                 e.printStackTrace();

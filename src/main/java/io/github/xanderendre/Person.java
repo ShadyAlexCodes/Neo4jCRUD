@@ -11,11 +11,13 @@ public class Person {
     }
 
     public Person(String lineToRead) {
-        String[] data = lineToRead.split(",");
-        id = Integer.parseInt(data[0]);
-        firstName = data[1].replaceAll(" ", "");
-        lastName = data[2].replaceAll(" ", "");
-        hireYear = Integer.parseInt(data[3].substring(1));
+        if(lineToRead != null) {
+            String[] data = lineToRead.split(",");
+            id = Integer.parseInt(data[0]);
+            firstName = data[1].replaceAll(" ", "");
+            lastName = data[2].replaceAll(" ", "");
+            hireYear = Integer.parseInt(data[3].substring(1));
+        }
     }
 
     public Person(int id, String firstName, String lastName, int hireYear) {
