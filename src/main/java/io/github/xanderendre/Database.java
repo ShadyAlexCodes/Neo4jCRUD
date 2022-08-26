@@ -2,13 +2,12 @@ package io.github.xanderendre;
 
 
 import org.neo4j.driver.*;
-import org.neo4j.driver.exceptions.Neo4jException;
-import org.neo4j.driver.types.Node;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+
+import static org.neo4j.driver.Values.parameters;
 
 public class Database implements AutoCloseable {
 
@@ -26,6 +25,18 @@ public class Database implements AutoCloseable {
 
     }
 
+    public static void editField(String id_entered, String field) {
+        String employeeBefore = driver.session().run("MATCH (e:Employee {EmployeeId:'" + id_entered + "'}) RETURN e").toString();
+        System.out.println(employeeBefore);
+
+        String input = Util.getString("Enter the new " + field + " for the user:");
+        try (Session session = driver.session()) {
+            driver.session().run("MATCH (e:Employee {EmployeeId:'" + id_entered + "'})" + "SET e." + field + " = '" + input.toUpperCase() + "' " + "RETURN e." + field + " + ', from node ' + id(e)", parameters("message", input));
+        }
+
+        System.out.println();
+    }
+
     @Override
     public void close() throws Exception {
 
@@ -35,11 +46,7 @@ public class Database implements AutoCloseable {
 
     public void createUserData(Person person) {
         try (Session session = driver.session()) {
-
             driver.session().run("CREATE (:Employee {EmployeeId: '" + person.getId() + "', FirstName: '" + person.getFirstName() + "', LastName: '" + person.getLastName() + "', HireYear: '" + person.getHireYear() + "'})");
-
-            session.close();
-            close();
         } catch (Exception exception) {
             exception.printStackTrace();
         }
@@ -51,154 +58,157 @@ public class Database implements AutoCloseable {
             for (Person person : people) {
                 driver.session().run("CREATE (:Employee {EmployeeId: '" + person.getId() + "', FirstName: '" + person.getFirstName() + "', LastName: '" + person.getLastName() + "', HireYear: '" + person.getHireYear() + "'})");
             }
-            session.close();
-            close();
+            System.out.println("Doneee");
+
         } catch (Exception exception) {
             exception.printStackTrace();
         }
     }
 
+    public void createReportsToRelationship(String emp, String boss, String relationship) {
+        try (Session session = driver.session()) {
+            String input = session.writeTransaction(tx -> {
+                Result result = tx.run("MATCH (e:Employee {EmployeeId:'" + emp + "'})" + ", (b:Employee {EmployeeId:'" + boss + "'}) " + "create (e)-[:" + relationship + "]->(b)");
 
+                return result.toString();
+            });
+        }
 
+    }
 
     public void readUserData() {
-//       used to be in try -> Session session = driver.session()
-        List<Person> loadAllPpl;
-        try  {
-            Result result = driver.session().run("MATCH (n:Employee) RETURN (*)");
-//            while()
+        try (Session session = driver.session()) {
+            Object greeting = session.writeTransaction(tx -> {
+                Result result = tx.run("MATCH (e) RETURN (e)");
 
+                List<Map<String, Object>> nodeList = new ArrayList<>();
 
-
-        } catch (Neo4jException e) {
-            e.printStackTrace();
-        }
-
-        driver.close();
-
-    }
-
-    public void readUserData(List<Person> people) {
-        List<Person> allPeople = new ArrayList<Person>();
-        for (Person person : people) {
-            try {
-                driver.session().run("MATCH (p) RETURN (p)");
-
-            } catch (Neo4jException e) {
-                e.printStackTrace();
-            }
-
-            driver.close();
+                while (result.hasNext()) {
+                    nodeList.add(result.next().fields().get(0).value().asMap());
+                }
+                return nodeList;
+            });
+            System.out.println();
+            System.out.println(greeting);
         }
     }
 
-/*
+    public void readQuantityOfUser() {
+        int input = Util.getInteger("Enter a quantity of users");
+        try (Session session = driver.session()) {
+            Object greeting = session.writeTransaction(tx -> {
+                Result result = tx.run("MATCH (e) RETURN (e) LIMIT " + input);
 
-    private static MongoCollection<Document> connection() {
-        MongoClient client = MongoClients.create("mongodb://localhost:2717");
-        MongoDatabase database = client.getDatabase("dbt230");
+                List<Map<String, Object>> nodeList = new ArrayList<>();
 
-        return database.getCollection("users");
-    }
-
-    public static boolean insertUserData(Person person) {
-        Document document = new Document();
-        document.append("first_name", person.getFirstName())
-                .append("last_name", person.getLastName())
-                .append("year_hired", person.getHireYear());
-
-        return connection().insertOne(document).wasAcknowledged();
-    }
-
-    public static boolean insertUserData(List<Document> documents) {
-        return connection().insertMany(documents).wasAcknowledged();
-    }
-
-    public static void readUserData() {
-        FindIterable<Document> iterDoc = connection().find();
-        Person person = null;
-        for (Document document : iterDoc) {
-            person = new Person(document.getString("first_name"), document.getString("last_name"), document.getInteger("year_hired"));
-            System.out.println(person + "  |  " + document.getString("email"));
+                while (result.hasNext()) {
+                    nodeList.add(result.next().fields().get(0).value().asMap());
+                }
+                return nodeList;
+            });
+            System.out.println();
+            System.out.println(greeting);
         }
     }
 
-    public static void readUserData(int quantity) {
-        FindIterable<Document> iterDoc = connection().find().limit(quantity);
-        Person person = null;
-        for (Document document : iterDoc) {
-            person = new Person(document.getString("first_name"), document.getString("last_name"), document.getInteger("year_hired"));
-            System.out.println(person + "  |  " + document.getString("email"));
-        }
-    }
+    public void readLastNameOfUser() {
+        String input = Util.getString("Enter the users last name: ");
+        try (Session session = driver.session()) {
+            Object greeting = session.writeTransaction(tx -> {
+                Result result = tx.run("MATCH (e:Employee) WHERE e.LastName = '" + input + "'  RETURN (e)");
 
-    public static void readUserData(String field, String value) {
-        FindIterable<Document> iterDoc = connection().find(eq(field, value));
-        for (Document document : iterDoc) {
-            System.out.println(document.getString("first_name") + " " + document.getString("last_name") + ": " + document.getString(field));
+                List<Map<String, Object>> nodeList = new ArrayList<>();
+
+                while (result.hasNext()) {
+                    nodeList.add(result.next().fields().get(0).value().asMap());
+                }
+                return nodeList;
+            });
+            System.out.println();
+            System.out.println(greeting);
         }
     }
 
 
-    public static void readUserData(String field, int value) {
-        FindIterable<Document> iterDoc = connection().find(eq(field, value));
-        for (Document document : iterDoc) {
-            System.out.println(document.getString("first_name") + " " + document.getString("last_name") + ": " + document.getInteger(field));
+    public void readForFieldAndValue() {
+        String field = Util.getString("Enter the field you are looking for: ");
+        String value = Util.getString("Enter the value you are looking for: ");
+        try (Session session = driver.session()) {
+            Object greeting = session.writeTransaction(tx -> {
+                Result result = tx.run("MATCH (e:Employee) WHERE e." + field + "='" + value + "'  RETURN (e)");
+
+                List<Map<String, Object>> nodeList = new ArrayList<>();
+
+                while (result.hasNext()) {
+                    nodeList.add(result.next().fields().get(0).value().asMap());
+                }
+                return nodeList;
+            });
+            System.out.println();
+            System.out.println(greeting);
         }
     }
 
-    public static Person readUserData(String lastName) {
-        Document document = connection().find(eq("last_name", lastName)).first();
-
-        if (document != null)
-            return new Person(document.getString("first_name"), document.getString("last_name"), document.getInteger("year_hired"));
-
-        return null;
+    public void readUserData(String id_entered) {
+        try (Session session = driver.session()) {
+            Object greeting = session.writeTransaction(tx -> {
+                Result result = tx.run("MATCH (e:Employee) WHERE e.EmployeeId = '" + id_entered + "' RETURN (e)");
+                return result.single().get(0).toString();
+            });
+            System.out.println(greeting);
+        }
     }
 
-    public static Person createUserData(String lastName) {
-        Person person = null;
-        Document document = connection().find(eq("last_name", lastName)).first();
+    public void deleteAllUsers() {
+        try (Session session = driver.session()) {
+            Object greeting = session.writeTransaction(tx -> {
+                Result result = tx.run("MATCH (n) DETACH DELETE n");
 
-        assert document != null;
-        person = new Person(document.getString("first_name"), document.getString("last_name"), document.getInteger("year_hired"));
-
-        return person;
+                System.out.println("Deleted all records from the database.");
+                return true;
+            });
+        }
     }
 
-    public static boolean editUser(Person person, String field,  String value) {
-        UpdateResult document = connection().updateOne(eq("last_name", person.getLastName()), set(field, value));
-        System.out.println("Modified Data: " + readUserData(person.getLastName()));
-        return document.wasAcknowledged();
+    public void deleteSpecificUser() {
+        String field = Util.getString("Enter the Employee's Last Name you want to delete");
+        try (Session session = driver.session()) {
+            Object greeting = session.writeTransaction(tx -> {
+                Result result = tx.run("MATCH (n:Employee{LastName: '" + field + "'}) DETACH DELETE n");
+
+                System.out.println("Deleted the record from the database.");
+                return true;
+            });
+        }
     }
 
-    public static boolean editUser(Person person, String field, int value) {
-        UpdateResult document = connection().updateOne(eq(field, person.getLastName()), set(field, value));
-        System.out.println("Modified Data: " + readUserData(person.getLastName()));
-        return document.wasAcknowledged();
+    public void createIndex() {
+        String nameOfIndex = Util.getString("Enter the name of the index:");
+        String indexField = Util.getString("Enter the field you want to index:");
+        try (Session session = driver.session()) {
+            Object greeting = session.writeTransaction(tx -> {
+                Result result = tx.run("CREATE INDEX " + nameOfIndex + " FOR (n:Employee) ON (n." + indexField + ")");
+
+                System.out.println("Deleted the record from the database.");
+                return true;
+            });
+        }
     }
 
-    public static boolean deleteUser(Person person) {
-        DeleteResult document = connection().deleteOne(eq("last_name", person.getLastName()));
-        return document.wasAcknowledged();
-    }
+    public void queryIndex() {
+        try (Session session = driver.session()) {
 
-    public static void deleteCollection() {
-        connection().drop();
-    }
+            System.out.println(session.run("SHOW INDEXES").toString());
 
-    public static boolean updateUser (Person person, String field, String newField, Document data) {
-        UpdateResult document = connection().updateOne(eq("last_name", person.getLastName()), addToSet(newField, data));
-        System.out.println("Modified Data: " + readUserData(person.getLastName()));
-        return document.wasAcknowledged();
-    }
+            String indexName = Util.getString("Enter the index name:");
+            Object greeting = session.writeTransaction(tx -> {
+                Result result = tx.run(":" + indexName);
 
-    public static boolean updateUsers() {
-        Faker faker = new Faker();
-        UpdateResult document = connection().updateMany(new Document(), addToSet("address", new Document().append("street", faker.address().streetAddress()).append("city", faker.address().cityName()).append("country", faker.address().country())), new UpdateOptions());
-        //System.out.println("Modified Data: " + readUserData(person.getLastName()));
-        return document.wasAcknowledged();
+                System.out.println("Deleted the record from the database.");
+                return true;
+            });
+        }
     }
-*/
-
 }
+
+
