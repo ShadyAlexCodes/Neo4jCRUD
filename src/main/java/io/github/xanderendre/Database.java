@@ -21,20 +21,48 @@ public class Database implements AutoCloseable {
         driver = GraphDatabase.driver(uri, AuthTokens.basic(username, password));
     }
 
-    private static void createRelationships() {
-
-    }
 
     public static void editField(String id_entered, String field) {
-        String employeeBefore = driver.session().run("MATCH (e:Employee {EmployeeId:'" + id_entered + "'}) RETURN e").toString();
-        System.out.println(employeeBefore);
+        System.out.println("User Data Before Edit: ");
+        readUserData(id_entered);
 
         String input = Util.getString("Enter the new " + field + " for the user:");
         try (Session session = driver.session()) {
-            driver.session().run("MATCH (e:Employee {EmployeeId:'" + id_entered + "'})" + "SET e." + field + " = '" + input.toUpperCase() + "' " + "RETURN e." + field + " + ', from node ' + id(e)", parameters("message", input));
+            String response = session.writeTransaction(tx -> {
+                Result result = tx.run("MATCH (e:Employee {EmployeeId:'" + id_entered + "'})" + "SET e." + field + " = '" + input + "' " + "RETURN e");
+                List<Map<String, Object>> nodeList = new ArrayList<>();
+
+                while (result.hasNext()) {
+                    nodeList.add(result.next().fields().get(0).value().asMap());
+                }
+                return nodeList;
+            }).toString();
+            System.out.println("Updated: " + response);
+        } catch (Exception exception) {
+            System.out.println("The query above threw an error.");
         }
 
+        System.out.println("User Data After Edit: ");
+        readUserData(id_entered);
         System.out.println();
+    }
+
+    public static void readUserData(String id_entered) {
+        try (Session session = driver.session()) {
+            Object greeting = session.writeTransaction(tx -> {
+                Result result = tx.run("MATCH (e:Employee) WHERE e.EmployeeId = '" + id_entered + "' RETURN (e)");
+                List<Map<String, Object>> nodeList = new ArrayList<>();
+
+                while (result.hasNext()) {
+                    nodeList.add(result.next().fields().get(0).value().asMap());
+                }
+                return nodeList;
+
+            });
+            System.out.println(greeting);
+        } catch (Exception exception) {
+            System.out.println("The query above threw an error.");
+        }
     }
 
     @Override
@@ -72,6 +100,8 @@ public class Database implements AutoCloseable {
 
                 return result.toString();
             });
+        } catch (Exception exception) {
+            System.out.println("The query above threw an error.");
         }
 
     }
@@ -90,6 +120,8 @@ public class Database implements AutoCloseable {
             });
             System.out.println();
             System.out.println(greeting);
+        } catch (Exception exception) {
+            System.out.println("The query above threw an error.");
         }
     }
 
@@ -108,6 +140,8 @@ public class Database implements AutoCloseable {
             });
             System.out.println();
             System.out.println(greeting);
+        } catch (Exception exception) {
+            System.out.println("The query above threw an error.");
         }
     }
 
@@ -129,7 +163,6 @@ public class Database implements AutoCloseable {
         }
     }
 
-
     public void readForFieldAndValue() {
         String field = Util.getString("Enter the field you are looking for: ");
         String value = Util.getString("Enter the value you are looking for: ");
@@ -146,67 +179,103 @@ public class Database implements AutoCloseable {
             });
             System.out.println();
             System.out.println(greeting);
-        }
-    }
-
-    public void readUserData(String id_entered) {
-        try (Session session = driver.session()) {
-            Object greeting = session.writeTransaction(tx -> {
-                Result result = tx.run("MATCH (e:Employee) WHERE e.EmployeeId = '" + id_entered + "' RETURN (e)");
-                return result.single().get(0).toString();
-            });
-            System.out.println(greeting);
+        } catch (Exception exception) {
+            System.out.println("The query above threw an error.");
         }
     }
 
     public void deleteAllUsers() {
         try (Session session = driver.session()) {
+
             Object greeting = session.writeTransaction(tx -> {
                 Result result = tx.run("MATCH (n) DETACH DELETE n");
 
                 System.out.println("Deleted all records from the database.");
                 return true;
             });
+
+        } catch (Exception exception) {
+            System.out.println("The query above threw an error.");
         }
     }
 
     public void deleteSpecificUser() {
         String field = Util.getString("Enter the Employee's Last Name you want to delete");
         try (Session session = driver.session()) {
+
             Object greeting = session.writeTransaction(tx -> {
                 Result result = tx.run("MATCH (n:Employee{LastName: '" + field + "'}) DETACH DELETE n");
 
                 System.out.println("Deleted the record from the database.");
                 return true;
             });
+        } catch (Exception exception) {
+            System.out.println("The query above threw an error.");
         }
     }
 
     public void createIndex() {
-        String nameOfIndex = Util.getString("Enter the name of the index:");
+        // String nameOfIndex = Util.getString("Enter the name of the index:");
         String indexField = Util.getString("Enter the field you want to index:");
         try (Session session = driver.session()) {
             Object greeting = session.writeTransaction(tx -> {
-                Result result = tx.run("CREATE INDEX " + nameOfIndex + " FOR (n:Employee) ON (n." + indexField + ")");
+                Result result = tx.run("CREATE INDEX ON :Employee(" + indexField + ")");
 
-                System.out.println("Deleted the record from the database.");
+                System.out.println("Index Created.");
                 return true;
             });
+
+        } catch (Exception exception) {
+            System.out.println("The query above threw an error.");
         }
     }
 
-    public void queryIndex() {
+    public void deleteIndex() {
+        // String nameOfIndex = Util.getString("Enter the name of the index:");
+        String indexField = Util.getString("Enter the index you want to delete:");
         try (Session session = driver.session()) {
-
-            System.out.println(session.run("SHOW INDEXES").toString());
-
-            String indexName = Util.getString("Enter the index name:");
             Object greeting = session.writeTransaction(tx -> {
-                Result result = tx.run(":" + indexName);
+                Result result = tx.run("DROP INDEX ON :Employee(" + indexField + ")");
 
-                System.out.println("Deleted the record from the database.");
+                System.out.println("Index Deleted.");
                 return true;
             });
+
+        } catch (Exception exception) {
+            System.out.println("The query above threw an error.");
+        }
+    }
+
+
+    public void queryIndex() {
+        try (Session session = driver.session()) {
+            Object indexes = session.writeTransaction(tx -> {
+                Result result = tx.run("CALL db.indexes");
+                List<Map<String, Object>> nodeList = new ArrayList<>();
+
+                while (result.hasNext()) {
+                    nodeList.add(result.next().fields().get(0).value().asMap());
+                }
+                return nodeList;
+            });
+
+            System.out.println(indexes);
+
+            String indexName = Util.getString("Enter the field name:");
+            String valueName = Util.getString("Enter the value name:");
+            Object query = session.writeTransaction(tx -> {
+                Result result = tx.run("MATCH (employee:Employee) WHERE employee." + indexName + " = '" + valueName + "' RETURN employee");
+                List<Map<String, Object>> nodeList = new ArrayList<>();
+
+                while (result.hasNext()) {
+                    nodeList.add(result.next().fields().get(0).value().asMap());
+                }
+                return nodeList;
+            });
+
+            System.out.println(query);
+        } catch (Exception exception) {
+            System.out.println("The query above threw an error");
         }
     }
 }

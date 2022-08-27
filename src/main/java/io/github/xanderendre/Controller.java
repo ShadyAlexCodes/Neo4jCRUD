@@ -131,11 +131,12 @@ public class Controller {
         boolean quit = false;
 
         while (!quit) {
-            int selection = Util.getMenuSelection("Advanced Options", new String[]{"Create an Index", "Query Index"}, true);
+            int selection = Util.getMenuSelection("Advanced Options", new String[]{"Create an Index", "Delete an index", "Query an Index"}, true);
             switch (selection) {
                 case 0 -> quit = true;
                 case 1 -> database.createIndex();
-                case 2 -> database.queryIndex();
+                case 2 -> database.deleteIndex();
+                case 3 -> database.queryIndex();
                 //  case 1 -> deleteAUser();
                 // case 2 -> deleteEntireCollection();
                 /// case 3 -> editYearHired(person);
